@@ -162,7 +162,7 @@ class PAISFTDataset(Dataset):
         codebook_path = model_config.get("codebook_cache_path", "codebook_cache/agent_vocab.pkl")
         self.matcher = PAICodebookMatcher(codebook_path)
         self.ds = SimplePAIInterface(str(self.pai_data_dir))
-        self.clip_ids = list(self.ds.clip_index["clip_id"].values)
+        self.clip_ids = list(self.ds.clip_index.index.values)
         if max_samples is not None:
             self.clip_ids = self.clip_ids[:max_samples]
         print(f"PAI SFT dataset: {len(self.clip_ids)} clips")
