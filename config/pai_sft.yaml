@@ -5,8 +5,12 @@ model:
   pretrained_model_path: /data/mnt_m62/10_personal/z59900495/workspace/DownloadTool-master/Qwen/Qwen2.5-VL-3B-Instruct
   sft_model_path: /data/mnt_m62/10_personal/z59900495/workspace/DownloadTool-master/Zewei-Zhou/AutoVLA/AutoVLA_PDMS_89.ckpt
   codebook_cache_path: /data/mnt_m62/10_personal/z59900495/workspace/AutoVLA/codebook_cache/agent_vocab.pkl
+  min_checkpoint_load_ratio: 0.95
+  attn_implementation: flash_attention_2
   train_vision_backbone: false
   train_lm_backbone: true
+  codebook_vehicle_width: 2.0
+  codebook_vehicle_length: 4.8
   trajectory:
     num_poses: 10
     interval_length: 0.5
@@ -23,17 +27,29 @@ training:
   batch_size: 1
   learning_rate: 2.0e-5
   epochs: 3
+  devices: 1
+  strategy: auto
+  precision: bf16-mixed
   num_workers: 4
   weight_decay: 0.01
   lr_warmup_step: 500
   lr_step_frequency: 2000
   lr_step_gamma: 0.98
-  train_sample_size: 5
-  val_sample_size: 50
+  # null uses every locally available training clip. Use --smoke-test first.
+  train_sample_size: null
+  val_sample_size: 200
   accumulate_grad_batches: 4
 
 data:
   pai_data_dir: /data/mnt_m181/z59900495/workspace/DownloadTool-master/pai_dataset
+  # Four context frames at 0.5, 1.0, 1.5 and 2.0 seconds. The trajectory
+  # starts at 2.5 seconds and ends at 7.0 seconds.
+  anchor_time_s: 2.0
+  frame_interval_s: 0.5
+  num_context_frames: 4
+  validation_fraction: 0.01
+  split_seed: 42
+  max_retries: 20
 
 inference:
   batch_size: 1
