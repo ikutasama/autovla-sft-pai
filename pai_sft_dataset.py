@@ -213,7 +213,7 @@ class PAISFTDataset(Dataset):
             if len(states) < NUM_POSES:
                 return None
             positions = np.array([[s.pose.translation[0], s.pose.translation[1]] for s in states])
-            headings = np.array([s.pose.rotation.as_euler('z') for s in states])
+            headings = np.array([s.pose.rotation.as_euler('xyz')[2] for s in states])
             vel = np.sqrt(states[0].velocity[0]**2 + states[0].velocity[1]**2)
             acc = np.sqrt(states[0].acceleration[0]**2 + states[0].acceleration[1]**2)
             x0, y0, h0 = positions[0, 0], positions[0, 1], headings[0]

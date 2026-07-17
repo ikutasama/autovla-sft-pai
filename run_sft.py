@@ -176,19 +176,22 @@ def main():
         state_dict = torch.load(ckpt_path, map_location="cpu")
         if "state_dict" in state_dict:
             state_dict = state_dict["state_dict"]
-        # Filter to matching keys (skip resized embedding mismatches)
-        model_keys = set(model.state_dict().keys())
-        loaded = 0
-        skipped = 0
+        # Remap keys: model.visual.* → visual.*, model.language_model.* → model.*
         new_state = {}
         for k, v in state_dict.items():
-            if k in model_keys:
-                new_state[k] = v
-                loaded += 1
+            if k.startswith("model.visual."):
+                new_k = k.replace("model.visual.", "visual.", 1)
+            elif k.startswith("model.language_model."):
+                new_k = k.replace("model.language_model.", "model.", 1)
             else:
-                skipped += 1
-        model.load_state_dict(new_state, strict=False)
-        print(f"Loaded {loaded} keys, skipped {skipped}")
+                new_k = k
+            new_state[new_k] = v
+        # Filter to matching keys
+        model_keys = set(model.state_dict().keys())
+        filtered = {k: v for k, v in new_state.items() if k in model_keys}
+        skipped = len(new_state) - len(filtered)
+        model.load_state_dict(filtered, strict=False)
+        print(f"Loaded {len(filtered)}/{len(new_state)} keys (skipped {skipped} non-matching)")
 
     save_dir = f"runs/sft/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
     trainer = pl.Trainer(
