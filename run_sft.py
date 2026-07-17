@@ -12,6 +12,7 @@ from pathlib import Path
 # Add AutoVLA repo to path
 _AUTOVLA_REPO = os.environ.get("AUTOVLA_REPO_PATH", "/data/mnt_m62/10_personal/z59900495/workspace/AutoVLA")
 sys.path.insert(0, _AUTOVLA_REPO)
+sys.path.insert(0, os.path.join(_AUTOVLA_REPO, "navsim"))
 
 import yaml
 import torch
