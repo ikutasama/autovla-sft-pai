@@ -26,20 +26,22 @@ warm start for later GRPO training in alpagym.
 
 ## Requirements
 
-Use Python 3.11 or newer. The current `physical_ai_av` package does not support
-the Python 3.9 environment from the original AutoVLA repository.
+Use the existing alpagym virtual environment on the A100 server. Do not run the
+script with the ambient conda environment's `python` or `pip`:
 
-Install a PyTorch build matching the CUDA version on the A100 server, followed
-by the runtime dependencies:
-
-```bash
-pip install 'physical_ai_av>=0.2.2' pytorch-lightning transformers qwen-vl-utils \
-  pandas pyarrow pillow pyyaml
-pip install flash-attn --no-build-isolation
+```text
+/data/mnt_m62/10_personal/z59900495/workspace/alpagym/.venv/bin/python
 ```
 
-The codebook is the only runtime artifact needed from the AutoVLA source tree;
-this loader does not import navsim or nuplan.
+That environment already contains the CUDA/PyTorch, Transformers,
+FlashAttention, `physical_ai_av` and Qwen-VL dependencies used by the working
+launch command. `physical_ai_av` itself requires Python 3.11 or newer. If a
+dependency ever needs to be changed, use the same interpreter with
+`.../.venv/bin/python -m pip`, not bare `pip`.
+
+The codebook is the only runtime artifact this loader reads from the AutoVLA
+source tree; it does not import navsim or nuplan. `AUTOVLA_REPO_PATH` is still
+exported below to preserve the server's established launch environment.
 
 ## Configure paths
 
@@ -65,12 +67,20 @@ the downloaded chunk files for these four features:
 
 ## Run in three stages
 
+From the repository root, first select the exact server interpreter and export
+the existing AutoVLA path:
+
+```bash
+export AUTOVLA_REPO_PATH=/data/mnt_m62/10_personal/z59900495/workspace/AutoVLA
+PYTHON_BIN=/data/mnt_m62/10_personal/z59900495/workspace/alpagym/.venv/bin/python
+```
+
 Always start with the data-only preflight. It decodes a real batch and checks
 the split, video inputs, trajectory and ten atomic action labels without
 loading the 3B model:
 
 ```bash
-python run_sft.py --config config/pai_sft.yaml --preflight-only
+"$PYTHON_BIN" run_sft.py --config config/pai_sft.yaml --preflight-only
 ```
 
 Then run the bounded one-epoch training smoke test. This uses eight train clips
@@ -78,7 +88,7 @@ and four validation clips, regardless of the production sample limits in the
 YAML:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python run_sft.py \
+CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" run_sft.py \
   --config config/pai_sft.yaml \
   --smoke-test
 ```
@@ -94,7 +104,7 @@ Check the log for all of the following before starting the full job:
 Finally run the configured job:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python run_sft.py --config config/pai_sft.yaml
+CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" run_sft.py --config config/pai_sft.yaml
 ```
 
 The supplied production config uses every locally available training clip,
@@ -140,8 +150,8 @@ prefixes.
 
 ## Tests
 
-On the server environment with PyTorch and the project dependencies installed:
+Run tests with the same alpagym virtual environment:
 
 ```bash
-python -m unittest discover -s tests -v
+"$PYTHON_BIN" -m unittest discover -s tests -v
 ```

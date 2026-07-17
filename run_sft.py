@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Single-GPU SFT for AutoVLA on the local NVIDIA PAI AV dataset."""
+"""Single-GPU SFT for AutoVLA on the local NVIDIA PAI AV dataset.
+
+Run this on the A100 server with alpagym's existing ``.venv/bin/python`` rather
+than the ambient conda interpreter. See README.md for the exact command.
+"""
 
 import argparse
 import datetime
