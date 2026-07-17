@@ -61,6 +61,14 @@ class LightSFTAutoVLA(pl.LightningModule):
         # Enable gradient checkpointing
         self.vlm.model.gradient_checkpointing_enable()
 
+        # Freeze vision backbone if configured (default: frozen)
+        if not model_cfg.get("train_vision_backbone", False):
+            for param in self.vlm.visual.parameters():
+                param.requires_grad = False
+            print("Vision backbone frozen (train_vision_backbone=false)")
+        else:
+            print("Vision backbone trainable (train_vision_backbone=true)")
+
         # Training config
         self.lr = config["training"]["learning_rate"]
         self.ignore_index = model_cfg["tokens"]["ignore_index"]
