@@ -39,9 +39,12 @@ training:
   train_sample_size: null
   val_sample_size: 200
   accumulate_grad_batches: 4
+  max_steps: 160000
+  checkpoint_every_n_steps: 40000
+  val_check_interval: 40000
 
 data:
-  pai_data_dir: /data/mnt_m181/z59900495/workspace/DownloadTool-master/pai_dataset
+  pai_data_dir: /data/mnt_m62/10_personal/z59900495/workspace/DownloadTool-master/pai_dataset
   # Four context frames at 0.5, 1.0, 1.5 and 2.0 seconds. The trajectory
   # starts at 2.5 seconds and ends at 7.0 seconds.
   anchor_time_s: 2.0

@@ -459,23 +459,37 @@ def main():
         strategy=training_cfg.get("strategy", "auto"),
         precision=training_cfg.get("precision", "bf16-mixed"),
         accumulate_grad_batches=int(training_cfg.get("accumulate_grad_batches", 4)),
-        gradient_clip_algorithm="value",
         gradient_clip_val=1.0,
+    )
+    ckpt_steps = int(training_cfg.get("checkpoint_every_n_steps", 0)) or None
     callbacks=[
         ModelCheckpoint(
-            monitor="val_loss",
+            monitor="val_loss" if not ckpt_steps else None,
             mode="min",
-            save_top_k=3,
+            save_top_k=3 if not ckpt_steps else -1,
             dirpath=save_dir,
-            filename="epoch={epoch}-val={val_loss:.4f}",
+            filename="step={step}-loss={train_loss:.4f}" if ckpt_steps else "epoch={epoch}-val={val_loss:.4f}",
             auto_insert_metric_name=False,
             save_weights_only=True,
-            every_n_train_steps=int(training_cfg.get("checkpoint_every_n_steps", 0)) or None,
-            every_n_epochs=None if training_cfg.get("checkpoint_every_n_steps") else 1,
+            every_n_train_steps=ckpt_steps,
+            every_n_epochs=None if ckpt_steps else 1,
         ),
         LearningRateMonitor(logging_interval="step"),
-    ],
-        logger=CSVLogger(save_dir=save_dir),
+    ]
+    val_interval = training_cfg.get("val_check_interval")
+    trainer = pl.Trainer(
+        num_nodes=1,
+        max_epochs=int(training_cfg["epochs"]),
+        val_check_interval=val_interval if val_interval else 1.0,
+        check_val_every_n_epoch=None if val_interval else 1,
+        accelerator="gpu",
+        devices=int(training_cfg.get("devices", 1)),
+        strategy=training_cfg.get("strategy", "auto"),
+        precision=training_cfg.get("precision", "bf16-mixed"),
+        accumulate_grad_batches=int(training_cfg.get("accumulate_grad_batches", 4)),
+        gradient_clip_algorithm="value",
+        gradient_clip_val=1.0,
+        callbacks=callbacks,
         enable_model_summary=True,
     )
 
