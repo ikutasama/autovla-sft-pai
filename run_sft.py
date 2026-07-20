@@ -461,19 +461,20 @@ def main():
         accumulate_grad_batches=int(training_cfg.get("accumulate_grad_batches", 4)),
         gradient_clip_algorithm="value",
         gradient_clip_val=1.0,
-        callbacks=[
-            ModelCheckpoint(
-                monitor="val_loss",
-                mode="min",
-                save_top_k=3,
-                dirpath=save_dir,
-                filename="epoch={epoch}-val={val_loss:.4f}",
-                auto_insert_metric_name=False,
-                save_weights_only=True,
-                every_n_epochs=1,
-            ),
-            LearningRateMonitor(logging_interval="step"),
-        ],
+    callbacks=[
+        ModelCheckpoint(
+            monitor="val_loss",
+            mode="min",
+            save_top_k=3,
+            dirpath=save_dir,
+            filename="epoch={epoch}-val={val_loss:.4f}",
+            auto_insert_metric_name=False,
+            save_weights_only=True,
+            every_n_train_steps=int(training_cfg.get("checkpoint_every_n_steps", 0)) or None,
+            every_n_epochs=None if training_cfg.get("checkpoint_every_n_steps") else 1,
+        ),
+        LearningRateMonitor(logging_interval="step"),
+    ],
         logger=CSVLogger(save_dir=save_dir),
         enable_model_summary=True,
     )
