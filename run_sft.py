@@ -471,7 +471,7 @@ def main():
             dirpath=save_dir,
             filename="step={step}-loss={train_loss:.4f}" if ckpt_steps else "epoch={epoch}-val={val_loss:.4f}",
             auto_insert_metric_name=False,
-            save_weights_only=True,
+            save_weights_only=False,
             every_n_train_steps=ckpt_steps,
             every_n_epochs=None if ckpt_steps else 1,
         ),
@@ -495,7 +495,14 @@ def main():
     )
 
     torch.cuda.empty_cache()
-    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=args.resume)
+    if args.resume:
+        import torch
+        ckpt = torch.load(args.resume, map_location="cpu", weights_only=False)
+        model.load_state_dict(ckpt["state_dict"], strict=False)
+        print(f"Loaded model weights from {args.resume} (global_step={ckpt.get('global_step', '?')}); optimizer restarts fresh")
+        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    else:
+        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     final_path = save_dir / "final.ckpt"
     try:
