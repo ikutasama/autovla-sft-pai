@@ -413,6 +413,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--resume", default=None, help="Path to checkpoint to resume from")
     parser.add_argument(
         "--preflight-only",
         action="store_true",
@@ -494,7 +495,7 @@ def main():
     )
 
     torch.cuda.empty_cache()
-    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=args.resume)
 
     final_path = save_dir / "final.ckpt"
     try:
