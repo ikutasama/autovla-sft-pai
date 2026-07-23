@@ -496,7 +496,6 @@ def main():
 
     torch.cuda.empty_cache()
     if args.resume:
-        import torch
         ckpt = torch.load(args.resume, map_location="cpu", weights_only=False)
         model.load_state_dict(ckpt["state_dict"], strict=False)
         print(f"Loaded model weights from {args.resume} (global_step={ckpt.get('global_step', '?')}); optimizer restarts fresh")
