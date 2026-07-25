@@ -300,14 +300,25 @@ class LightSFTAutoVLA(pl.LightningModule):
             betas=(0.9, 0.999),
         )
         warmup = int(training_cfg.get("lr_warmup_step", 500))
-        step_frequency = int(training_cfg.get("lr_step_frequency", 2000))
-        gamma = float(training_cfg.get("lr_step_gamma", 0.98))
+        schedule = training_cfg.get("lr_schedule", "step")
+        max_steps = int(training_cfg.get("max_steps", 40000))
+        min_ratio = float(training_cfg.get("lr_min_ratio", 0.05))
 
-        def lr_scale(step: int) -> float:
-            if warmup > 0 and step < warmup:
-                return 0.05 + 0.95 * step / warmup
-            decay_steps = max(0, step - warmup) // max(1, step_frequency)
-            return max(0.01, gamma**decay_steps)
+        if schedule == "cosine":
+            def lr_scale(step: int) -> float:
+                if warmup > 0 and step < warmup:
+                    return 0.05 + 0.95 * step / warmup
+                progress = min(1.0, (step - warmup) / max(1, max_steps - warmup))
+                return min_ratio + (1.0 - min_ratio) * 0.5 * (1.0 + __import__("math").cos(__import__("math").pi * progress))
+        else:
+            step_frequency = int(training_cfg.get("lr_step_frequency", 2000))
+            gamma = float(training_cfg.get("lr_step_gamma", 0.98))
+
+            def lr_scale(step: int) -> float:
+                if warmup > 0 and step < warmup:
+                    return 0.05 + 0.95 * step / warmup
+                decay_steps = max(0, step - warmup) // max(1, step_frequency)
+                return max(0.01, gamma**decay_steps)
 
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_scale)
         return {
@@ -496,10 +507,8 @@ def main():
 
     torch.cuda.empty_cache()
     if args.resume:
-        ckpt = torch.load(args.resume, map_location="cpu", weights_only=False)
-        model.load_state_dict(ckpt["state_dict"], strict=False)
-        print(f"Loaded model weights from {args.resume} (global_step={ckpt.get('global_step', '?')}); optimizer restarts fresh")
-        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        print(f"Resuming from checkpoint: {args.resume}")
+        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=args.resume)
     else:
         trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 

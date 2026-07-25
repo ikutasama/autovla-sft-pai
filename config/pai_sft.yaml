@@ -24,24 +24,26 @@ model:
     max_pixels: 109760
 
 training:
-  batch_size: 1
-  learning_rate: 2.0e-5
+  batch_size: 2
+  learning_rate: 3.0e-5
   epochs: 3
   devices: 1
   strategy: auto
   precision: bf16-mixed
   num_workers: 4
   weight_decay: 0.01
-  lr_warmup_step: 500
+  lr_schedule: cosine
+  lr_warmup_step: 1000
+  lr_min_ratio: 0.05
+  # legacy step decay params (unused when lr_schedule=cosine)
   lr_step_frequency: 2000
   lr_step_gamma: 0.98
-  # null uses every locally available training clip. Use --smoke-test first.
   train_sample_size: null
   val_sample_size: 200
   accumulate_grad_batches: 4
-  max_steps: 40000
-  checkpoint_every_n_steps: 10000
-  val_check_interval: 10000
+  max_steps: 80000
+  checkpoint_every_n_steps: 4300
+  val_check_interval: 4300
 
 data:
   pai_data_dir: /data/mnt_m62/10_personal/z59900495/workspace/DownloadTool-master/pai_dataset
