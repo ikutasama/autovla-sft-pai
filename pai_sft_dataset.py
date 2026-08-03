@@ -442,16 +442,28 @@ class PAISFTDataset(Dataset):
             * MICROSECONDS_PER_SECOND
         ).astype(np.int64)
 
+        # History waypoints: 4 points at 0.5s intervals before anchor.
+        # These give the model the past 2s of trajectory shape so it can
+        # produce temporally continuous predictions (reduces lateral jitter
+        # in receding-horizon rollout).
+        n_history = 4
+        history_us = anchor_us - np.rint(
+            np.arange(n_history, 0, -1)
+            * self.pose_interval_s
+            * MICROSECONDS_PER_SECOND
+        ).astype(np.int64)
+
         if hasattr(interpolator, "time_range"):
             first_us, last_us = interpolator.time_range
-            if anchor_us < first_us or future_us[-1] > last_us:
+            if history_us[0] < first_us or future_us[-1] > last_us:
                 raise ValueError(
                     f"Egomotion range {first_us}..{last_us} does not cover "
-                    f"{anchor_us}..{future_us[-1]}"
+                    f"{history_us[0]}..{future_us[-1]}"
                 )
 
         current_state = interpolator(anchor_us)
         future_states = [interpolator(int(timestamp)) for timestamp in future_us]
+        history_states = [interpolator(int(timestamp)) for timestamp in history_us]
         current_position = np.asarray(current_state.pose.translation, dtype=np.float64)[
             :2
         ]
@@ -463,6 +475,21 @@ class PAISFTDataset(Dataset):
             ]
         )
         future_headings = np.asarray([self._yaw(state) for state in future_states])
+
+        # History positions relative to current (for prompt text).
+        history_positions_abs = np.asarray(
+            [
+                np.asarray(state.pose.translation, dtype=np.float64)[:2]
+                for state in history_states
+            ]
+        )
+        history_delta = history_positions_abs - current_position
+        cos_h, sin_h = np.cos(current_heading), np.sin(current_heading)
+        history_relative = np.empty_like(history_delta)
+        history_relative[:, 0] = cos_h * history_delta[:, 0] + sin_h * history_delta[:, 1]
+        history_relative[:, 1] = (
+            -sin_h * history_delta[:, 0] + cos_h * history_delta[:, 1]
+        )
 
         delta = future_positions - current_position
         cos_heading, sin_heading = np.cos(current_heading), np.sin(current_heading)
@@ -483,6 +510,7 @@ class PAISFTDataset(Dataset):
             "gt_heading": relative_headings.astype(np.float32),
             "velocity": float(np.linalg.norm(velocity[:2])),
             "acceleration": float(np.linalg.norm(acceleration[:2])),
+            "history_xy": history_relative.astype(np.float32),  # [4, 2]
         }
         if not all(
             np.isfinite(value).all()
@@ -563,6 +591,9 @@ class PAISFTDataset(Dataset):
             {
                 "type": "text",
                 "text": (
+                    f"The recent trajectory of the ego vehicle (x, y) in ego frame "
+                    f"over the past 2 seconds at 0.5s intervals is: "
+                    f"{ego['history_xy'].tolist()}. "
                     f"The current velocity of the vehicle is {ego['velocity']:.3f} m/s, "
                     f"and the current acceleration is {ego['acceleration']:.3f} m/s². "
                     "No route or navigation command is available for this clip. Based on "
