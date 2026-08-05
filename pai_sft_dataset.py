@@ -593,7 +593,7 @@ class PAISFTDataset(Dataset):
                 "text": (
                     f"The recent trajectory of the ego vehicle (x, y) in ego frame "
                     f"over the past 2 seconds at 0.5s intervals is: "
-                    f"{ego['history_xy'].tolist()}. "
+                    f"{[[round(float(v), 2) for v in pt] for pt in ego['history_xy'].tolist()]}. "
                     f"The current velocity of the vehicle is {ego['velocity']:.3f} m/s, "
                     f"and the current acceleration is {ego['acceleration']:.3f} m/s². "
                     "No route or navigation command is available for this clip. Based on "
